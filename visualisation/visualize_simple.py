@@ -34,18 +34,18 @@ class Plotter:
         # Add square markers for data points
         ax.scatter(self._dates, self._closing_prices, color="blue", marker="s", label="Actual")
 
-        if predictions_std is not None:
-            self._closing_prices.insert(0, self._closing_prices[0])
-            self._closing_prices.pop()
-            lower_bound_fill = self._closing_prices
-            # Plotting the shaded area for standard deviation (std) range
-            plt.fill_between(
-                self._dates,  # X-axis values (indices)
-                np.array(self._predicted_closing_prices).T[0] - 3 * np.array(predictions_std).T[0],#lower_bound_fill,  # Lower bound (predicted - std)
-                np.array(self._predicted_closing_prices).T[0] + 3 * np.array(predictions_std).T[0],  # Upper bound (predicted + std)
-                color='red',  # Color of the shaded area
-                alpha=0.3,  # Transparency of the shaded area
-            )
+        # if predictions_std is not None:
+        #     self._closing_prices.insert(0, self._closing_prices[0])
+        #     self._closing_prices.pop()
+        #     lower_bound_fill = self._closing_prices
+        #     # Plotting the shaded area for standard deviation (std) range
+        #     plt.fill_between(
+        #         self._dates,  # X-axis values (indices)
+        #         np.array(self._predicted_closing_prices).T[0] - 3 * np.array(predictions_std).T[0],#lower_bound_fill,  # Lower bound (predicted - std)
+        #         np.array(self._predicted_closing_prices).T[0] + 3 * np.array(predictions_std).T[0],  # Upper bound (predicted + std)
+        #         color='red',  # Color of the shaded area
+        #         alpha=0.3,  # Transparency of the shaded area
+        #     )
             
         # Plot the line
         ax.plot(self._dates, self._predicted_closing_prices, color="red")

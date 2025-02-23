@@ -1,6 +1,7 @@
 import yfinance as yf
 from datetime import datetime
 from pandas.core.series import Series
+import pandas as pd
 
 
 class Stock:
@@ -71,11 +72,71 @@ class Stock:
          # Getting the dates of the stock data
         dates = stock_data.index
 
+        open_ = pd.Series(stock_data['Open'].values.T[0].tolist())
+        high = pd.Series(stock_data['High'].values.T[0].tolist())
+        low = pd.Series(stock_data['Low'].values.T[0].tolist())
+        close = pd.Series(stock_data['Close'].values.T[0].tolist())
         return (
             dates,
-            stock_data['Open'],
-            stock_data['High'],
-            stock_data['Low'],
-            stock_data['Close']
+            open_,
+            high,
+            low,
+            close
+        )
+            # stock_data['Open'],
+            # stock_data['High'],
+            # stock_data['Low'],
+            # stock_data['Close']
+            # )
+    
+    def get_all_data(
+            self
+            ) -> tuple[
+                datetime,
+                Series,
+                Series,
+                Series,
+                Series,
+                Series
+                ]:
+        """
+        The method returns the stock prices.
+
+        :return: The stock data in the following format
+            tuple[
+                Date,
+                Open,
+                High,
+                Low,
+                Close,
+                Volume
+                ]
+        :type return: tuple[
+                datetime,
+                Series,
+                Series,
+                Series,
+                Series,
+                Series
+                ]
+        """
+        # Getting the dates of the stock data
+        stock_data = yf.download(
+            self.name,
+            self.start_date,
+            self.end_date,
+            interval=self.interval
+            )
+        
+         # Getting the dates of the stock data
+        dates = stock_data.index
+
+        return (
+            dates,
+            stock_data["Open"],
+            stock_data["High"],
+            stock_data["Low"],
+            stock_data["Close"],
+            stock_data["Volume"]
             )
     

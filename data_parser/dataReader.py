@@ -46,9 +46,30 @@ class DataReader:
             for dat, op, hi, lo, cl in zip(dates, open_, high, low, close)
             ]
         
-        print(f"Retrieved data successfully for the period `{start_date}` : `{end_date}`")
+        print(f"Retrieving data for the period `{start_date}` : `{end_date}` ...")
 
         return self.data
+    
+    def get_all_data(
+            self,
+            start_date: str,
+            end_date: str
+            ) -> tuple[datetime, Series, Series, Series, Series, Series]:
+        # Validate dates
+        self._validate_date(start_date)
+        self._validate_date(end_date)
+
+        # Retrieve data
+        stock = Stock(
+            self.stock_name,
+            start_date,
+            end_date,
+            self.interval
+            )
+        
+        print(f"Retrieving ALL data for the period `{start_date}` : `{end_date}` ...")
+
+        return stock.get_all_data()
 
     def _retrieve_data(
             self,

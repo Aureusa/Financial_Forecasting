@@ -59,6 +59,8 @@ class Model:
 
         self.model = model
 
+        return model
+
     def compileModel(
             self,
             learning_rate: float,
