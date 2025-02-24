@@ -47,51 +47,12 @@ class StockDataFactory:
 
         # Generate labels from the data
         data, labels = self._get_labeled_data(processed_data)
-        
+
         return (
             np.array(data),
             np.array(labels)
             )
 
-    def get_grand_ensemble_model_data(
-            self,
-            start_date: str,
-            end_date: str,
-            training: bool = True
-        ):
-        # Generate the sets
-        if training:
-            (
-                metadata_sets,
-                residuals_sets,
-                three_day_sma_sets,
-                close_sets
-            ) = self._generate_metasets_from_dates(start_date, end_date)
-        else:
-            (
-                metadata_sets,
-                residuals_sets,
-                three_day_sma_sets,
-                close_sets
-            ) = self._generate_metasets_from_dates(start_date, end_date, True)
-
-        # Remove the last element of the sets
-        mlp_data = self._remove_last_entry_in_sets(residuals_sets)
-        lstm_data = self._remove_last_entry_in_sets(three_day_sma_sets)
-
-        # Get the second to last entry of the metadata
-        meta_mlp_data = self._get_entry_in_sets(data=metadata_sets, index=-2)
-
-        # Get the labels (i.e. the last element in each set)
-        labels = self._get_entry_in_sets(data=close_sets, index=-1)
-        
-        return (
-            np.array(mlp_data),
-            np.array(lstm_data),
-            np.array(meta_mlp_data),
-            np.array(labels)
-        )
-    
     def get_raw_data(
             self,
             start_date: str,
@@ -126,7 +87,7 @@ class StockDataFactory:
         stock_data = DataProcessor(data).data
         return DataProcessor(None).\
             calculate_SMA(stock_data, length = sma_lookback_period)
-    
+
     def get_residuals_data(
             self,
             raw_data: list[tuple[str, float, float, float, float]],
@@ -146,7 +107,7 @@ class StockDataFactory:
         stock_data = DataProcessor(raw_data).data
         return DataProcessor(None).\
             calculate_residuals(stock_data, sma)
-    
+
     def _generate_sets_from_dates(self, stard_date: str, end_date: str):
         # Get data
         self._data_reader = DataReader(self._stock_name)
@@ -154,196 +115,13 @@ class StockDataFactory:
             stard_date,
             end_date
             )
-        
+
         # Generate sets
         self._data_processor = DataProcessor(stock_data)
         sets = self._data_processor.generate_sets(
             self._points_per_set+2)
         return sets
-    
-    def _generate_metasets_from_dates(self, stard_date: str, end_date: str, rolling_sets: bool = False):
-        # Get data
-        self._data_reader = DataReader(self._stock_name)
-        all_data = self._data_reader.get_all_data(
-            stard_date,
-            end_date
-            )
-        
-        # Build the features
-        metadata, residuals, three_day_sma, close = self._extract_features(all_data)
 
-        if rolling_sets:
-            # Generate the test sets
-            metadata_sets = [metadata[i:i + 10] for i in range(len(metadata) - 10 + 1)]
-            residuals_sets = [residuals[i:i + 10] for i in range(len(residuals) - 10 + 1)]
-            three_day_sma_sets = [three_day_sma[i:i + 10] for i in range(len(three_day_sma) - 10 + 1)]
-            close_sets = [close[i:i + 10] for i in range(len(close) - 10 + 1)]
-
-            return (
-                metadata_sets,
-                residuals_sets,
-                three_day_sma_sets,
-                close_sets
-            )
-
-        # Generate the train sets
-        (
-            metadata_sets,
-            residuals_sets,
-            three_day_sma_sets,
-            close_sets
-        ) = self._generate_sets(
-            metadata,
-            residuals,
-            three_day_sma,
-            close,
-            self._points_per_set
-        )
-
-        return (
-            metadata_sets,
-            residuals_sets,
-            three_day_sma_sets,
-            close_sets
-        )
-
-    def _extract_features(self, all_data):
-        (
-            dates,
-            open_,
-            high,
-            low,
-            close,
-            volume
-        ) = all_data
-
-        open_ = open_.values.T.tolist()[0]
-        high = high.values.T.tolist()[0]
-        low = low.values.T.tolist()[0]
-        close = close.values.T.tolist()[0]
-        volume = volume.values.T.tolist()[0]
-        
-        h_min_l = np.array(high) - np.array(low)
-
-        o_min_c = np.array(open_) - np.array(close)
-
-        three_day_sma = self._calculate_sma(close, 3)
-
-        seven_day_sma = self._calculate_sma(close, 7)
-
-        fourteen_day_sma = self._calculate_sma(close, 14)
-
-        seven_day_std = pd.Series(close).rolling(window=7).std().dropna().tolist()
-
-        # Bollinger band
-        mid_band = self._calculate_sma(close, 20)
-        twenty_day_std = pd.Series(close).rolling(window=20).std().dropna().tolist()
-
-        upper_band = np.array(mid_band) + 2 * np.array(twenty_day_std)
-        lower_band = np.array(mid_band) - 2 * np.array(twenty_day_std)
-
-        # Resize the arrays
-        scaler = - len(upper_band)
-        h_min_l = np.array(h_min_l)[scaler:]
-        o_min_c = np.array(o_min_c)[scaler:]
-        seven_day_sma = np.array(seven_day_sma)[scaler:]
-        fourteen_day_sma = np.array(fourteen_day_sma)[scaler:]
-        seven_day_std = np.array(seven_day_std)[scaler:]
-        volume = np.array(volume)[scaler:]
-        dates = np.array(dates)[scaler:]
-        mid_band = np.array(mid_band)
-        upper_band = np.array(upper_band)
-        lower_band = np.array(lower_band)
-        rsi = self._compute_rsi(close)[scaler:]
-        close = np.array(close)[scaler:]
-
-        upper_band_close_diff = np.abs(upper_band-close)
-        lower_band_close_diff = np.abs(lower_band-close)
-        mid_band_close_diff = np.abs(mid_band-close)
-
-        metadata = np.column_stack(
-            [
-                close,
-                h_min_l,
-                o_min_c,
-                seven_day_sma,
-                fourteen_day_sma,
-                seven_day_std,
-                mid_band_close_diff,
-                upper_band_close_diff,
-                lower_band_close_diff,
-                rsi
-            ]
-        )
-
-        # Slice the 3 day SMA and convert it to ndarray
-        three_day_sma = np.array(three_day_sma)[scaler:]
-
-        # Compute residuals
-        residuals = self._calculate_residuals(close.tolist(), three_day_sma.tolist())
-
-        return metadata, residuals, three_day_sma, close
-
-    def _compute_rsi(self, closing_prices, period=14):
-        df = pd.DataFrame({"Close": closing_prices})
-        delta = df["Close"].diff(1)  # Calculate daily price changes
-
-        gain = np.where(delta > 0, delta, 0)  # Keep only positive gains
-        loss = np.where(delta < 0, -delta, 0)  # Keep only negative losses
-
-        avg_gain = pd.Series(gain).rolling(window=period, min_periods=1).mean()
-        avg_loss = pd.Series(loss).rolling(window=period, min_periods=1).mean()
-
-        rs = avg_gain / avg_loss  # Relative Strength
-        rsi = 100 - (100 / (1 + rs))  # RSI Calculation
-
-        return rsi.dropna().to_numpy()
-    
-    def _calculate_residuals(
-            self,
-            closing_prices: list[float],
-            sma: list[float]
-            ) -> list[float]:
-        """
-        Calculates the residuals by substracting the closing prices
-        from a Simple Moving Average (SMA).
-        """
-        residuals = [round(a - b, 2) for a, b in zip(sma, closing_prices)]
-
-        return residuals
-    
-    def _generate_sets(
-            self,
-            metadata, residuals, three_day_sma, close, pointsPerSet
-            ):
-        # Get the data length
-        data_len = len(metadata)
-
-        # Define the different lists that hold the sets
-        metadata_sets = []
-        residuals_sets = []
-        three_day_sma_sets = []
-        close_sets = []
-
-        # Populate the lists
-        for i in range(data_len//pointsPerSet):
-            md = metadata[i*pointsPerSet:(i+1)*pointsPerSet]
-            res = residuals[i*pointsPerSet:(i+1)*pointsPerSet]
-            tds = three_day_sma[i*pointsPerSet:(i+1)*pointsPerSet]
-            cl = close[i*pointsPerSet:(i+1)*pointsPerSet]
-
-            metadata_sets.append(md)
-            residuals_sets.append(res)
-            three_day_sma_sets.append(tds)
-            close_sets.append(cl)
-
-        return (
-            metadata_sets,
-            residuals_sets,
-            three_day_sma_sets,
-            close_sets
-        )
-    
     def _preprocess_data(
             self,
             sets: list[list[float]],
@@ -373,39 +151,6 @@ class StockDataFactory:
                 data.append(residual)
         return data
 
-    def _remove_last_entry_in_sets(self, data: list[np.ndarray]):
-        sliced_data = []
-        for dat in data:
-            new_dat = dat[:-1]
-            sliced_data.append(new_dat)
-        return sliced_data
-    
-    def _get_entry_in_sets(self, data: list[np.ndarray], index: int):
-        sliced_data = []
-        for dat in data:
-            new_dat = dat[index]
-            sliced_data.append(new_dat)
-        return sliced_data
-
-    def _calculate_sma(
-            self,
-            close: list[float],
-            length: int = 3
-            ) -> list[float]:
-        # Creating a dataFrame (required for the pandas_ta module)
-        close_pd = pd.DataFrame({"close": []})
-        close_pd["close"] = close
-
-        # Calculating SMA
-        SMA = ta.sma(close_pd["close"], length=length)
-
-        # Converting SMA to list and rounding it,
-        # also removing the NAN value
-        SMA_list = SMA.tolist()
-        SMA_list = [round(x, 2) for x in SMA_list if not math.isnan(x)]
-
-        return SMA_list
-    
     def _get_labeled_data(
             self,
             processed_data: Any
@@ -424,4 +169,3 @@ class StockDataFactory:
             self._labels_per_set
             )
         return data, labels
-    
