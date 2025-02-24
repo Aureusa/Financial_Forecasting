@@ -1,8 +1,8 @@
 import numpy as np
 import os
 
-from network.network import Model
-from trend_model.base_model import LstmModel
+from naive_model import Model
+from naive_model import LstmModel
 
 
 MODEL_FOLDER = os.path.join(os.getcwd(), "models")

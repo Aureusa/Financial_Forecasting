@@ -2,7 +2,7 @@ from typing import Tuple
 import tensorflow as tf
 from copy import deepcopy
 
-from network.network import Model
+from naive_model import Model
 
 # Disable progress bars
 tf.keras.utils.disable_interactive_logging()

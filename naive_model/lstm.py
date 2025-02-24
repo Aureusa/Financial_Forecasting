@@ -1,13 +1,11 @@
 import numpy as np
-from keras.src.layers import ReLU
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout  # type: ignore
 from tensorflow.keras.layers import LSTM  # type: ignore
 from tensorflow.keras.models import Sequential  # type: ignore
-from network.network import Model
-from tensorflow.keras.optimizers import Adam  # type: ignore
+from naive_model import Model
 
-from trend_model.normalizer import DataNormalizer
+from naive_model.normalizer import DataNormalizer
 
 
 class LstmModel(Model):
