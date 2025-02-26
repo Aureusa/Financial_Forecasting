@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch import Tensor
-
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 class Model(nn.Module):
     def __init__(
@@ -59,24 +60,68 @@ class Model(nn.Module):
         """
         super(Model, self).__init__()
 
+        self._loss_vals = []
+
         self._num_timesteps = num_timesteps
         self._num_sources = num_sources
         self._num_features = time_combiner_params["d_model"]
 
-        mlp_input = (
-            time_combiner_params["d_model"] * (num_timesteps + num_sources)
-        ) # 2*F*T
+        # Define the embeders
+        self._time_embedders = torch.nn.ModuleList(
+            torch.nn.Sequential(
+                torch.nn.Linear(1, self._num_features),
+                # torch.nn.BatchNorm1d(num_sources),
+                torch.nn.ReLU(),
+                torch.nn.Linear(self._num_features, self._num_features),
+                # torch.nn.BatchNorm1d(num_sources),
+                torch.nn.ReLU(),
+            ) # (B, S, T, 1) x (1, F) = (B, S, T, F)
+        for _ in range(self._num_timesteps))
 
         # Time and Source transformer
         self._time_combiner = nn.TransformerEncoderLayer(**time_combiner_params, batch_first=True)
-        self._source_combiner = nn.TransformerEncoderLayer(**source_combiner_params, batch_first=True)
+        #self._source_combiner = nn.TransformerEncoderLayer(**source_combiner_params, batch_first=True)
 
-        # Fully connected output layer
-        self._mlp = self._build_mlp(mlp_input, mlp_layers)
+        self._linear = torch.nn.Sequential(
+            nn.Linear(self._num_timesteps, 1),
+            # torch.nn.BatchNorm1d(self._num_features)
+        )
+
+        # Fully connected output MLP
+        # self._mlp = self._build_mlp(self._num_features, mlp_layers)
+
+        # Output layer
+        self._fc_out = nn.Linear(self._num_features, 1)
 
         # Loss function and optimizer
         self._criterion = nn.MSELoss()
         self._optimizer = optim.Adam(self.parameters(), lr=lr)
+        
+
+    def data_compatibility_check(self, x: Tensor) -> None:
+        shape = x.shape
+
+        if len(shape) != 3:
+            raise ValueError(
+                f"You must provide a data that in (batch_size, num_timesteps, num_source), got {shape} instead"
+            )
+        
+        if shape[1] != self._num_timesteps:
+            raise ValueError(
+                f"Expected number of timesteps `{self._num_timesteps}` got `{shape[1]}` instead."
+            )
+
+        if shape[2] != self._num_sources:
+            raise ValueError(
+                f"Expected number of sources `{self._num_sources}` got `{shape[2]}` instead."
+            )
+        
+        message = f"|| Your data passed the compatibility check and is of the shape {shape}. ||"
+        border = "=" * len(message)
+
+        success_message = f"\n{border}\n{message}\n{border}"
+
+        print(success_message)
 
     def forward(self, x: Tensor) -> Tensor:
         """
@@ -89,27 +134,20 @@ class Model(nn.Module):
         :return: the predictions of the model
         :rtype: Tensor
         """
-        # Pass through the first Transformer to learn dependencies 
+        # Pass through the Transformer to learn dependencies 
         # throught time of the sources.
         combined_through_time = self.\
-            _feature_embeddings(x, num_features=self._num_features, time_embedding=True)
+            _feature_embeddings(x, num_features=self._num_features)
         combined_through_time = self._time_combiner(combined_through_time)
-        result_time = combined_through_time[:, -self._num_timesteps:, :]
+        result_time = combined_through_time[:, -self._num_timesteps:, :] # (B, T, F)
 
-        # Pass through the second Transformer to learn dependencies 
-        # between different sources.
-        combined_via_source = self.\
-            _feature_embeddings(x, num_features=self._num_features, time_embedding=False)
-        combined_via_source = self._source_combiner(combined_via_source)
-        result_source = combined_via_source[:, -self._num_sources:, :]
+        result_transposed = result_time.transpose(1, 2) # (B, F, T)
 
-        # Combine the results from the time and source embeddings
-        combined_result = torch.concat((result_time, result_source), dim = 1) # (B, 2*S*T, F)
-        B, T_plus_S, F = combined_result.shape
-        combined_result = combined_result.reshape(B, T_plus_S*F) # (B, 2*F*T*S)
+        results = self._linear(result_transposed) # (B, F, T) x (T, 1) = (B, F, 1)
 
-        # Pass through the MLP for inference
-        final_result = self._mlp(combined_result)
+        results_squezed = results.squeeze(-1)  # (B, F)
+
+        final_result = self._fc_out(results_squezed) # (B, F) x (F, 1) = (B, 1)
 
         return final_result
 
@@ -124,7 +162,7 @@ class Model(nn.Module):
         :type epochs: int
         """
         self.train()  # Set to training mode
-        for epoch in range(epochs):
+        for epoch in tqdm(range(epochs), desc="Training Progress", unit="epoch"):
             total_loss = 0
             for batch in train_loader:
                 x_batch, y_batch = batch
@@ -137,7 +175,19 @@ class Model(nn.Module):
 
                 total_loss += loss.item()
 
+            self._loss_vals.append(total_loss / len(train_loader))
             print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss / len(train_loader):.4f}")
+
+    def make_loss_plot(self, name: str) -> None:
+        """
+        Makes a plot of the loss function and saves it.
+
+        :param name: the name of the plot
+        :type name: str
+        """
+        plt.plot(self._loss_vals)
+        plt.savefig(f"{name}.png")
+        plt.close()
 
     def evaluate_model(self, test_loader: Tensor):
         """
@@ -179,7 +229,7 @@ class Model(nn.Module):
         mlp_layers.append(nn.Linear(input_dim, 1))
         return nn.Sequential(*mlp_layers)
     
-    def _feature_embeddings(self, x: Tensor, num_features: int, time_embedding: bool) -> Tensor:
+    def _feature_embeddings(self, x: Tensor, num_features: int) -> Tensor:
         """
         Creates feature embeddings.
 
@@ -196,35 +246,15 @@ class Model(nn.Module):
         :return: The data with the embedded features.
         :rtype: Tensor
         """
-        if time_embedding:
-            B, T, S = x.shape # (B, T, S)
+        batch_size = x.shape[0] # (B, T, S)
 
-            target_size = S
-            num_embeders = T
-        else:
-            x = x.moveaxis(1, 2) # (B, S, T)
-            
-            # Switch the T and S dimensions to tokenize
-            # the sources. T is S and S is T here, this is done
-            # to comform to the logic of the code below
-            B, S, T = x.shape # S -> T; T -> S
+        embedders = self._time_embedders
 
-            target_size = T
-            num_embeders = S
+        target_size = self._num_sources # (S,)
 
         x = x.unsqueeze(-1) # (B, S, T, 1)/(B, T, S, 1)
 
-        # Create a list of embedders
-        embedders = torch.nn.ModuleList(
-            torch.nn.Sequential(
-                torch.nn.Linear(1, num_features),
-                torch.nn.BatchNorm1d(target_size),
-                torch.nn.ReLU(),
-                torch.nn.Linear(num_features, num_features),
-                torch.nn.BatchNorm1d(target_size),
-                torch.nn.ReLU(),
-            ) # (B, S, T, 1) x (1, F) = (B, S, T, F)
-        for _ in range(num_embeders))
+        num_embeders = len(embedders)
 
         # Featurize each source independently
         features = []
@@ -245,7 +275,11 @@ class Model(nn.Module):
 
         # Reshape the data into the correct shape
         # (batch_size, timestep*source, num_features)
-        combined = features.reshape(B, S*T, num_features) # (B, S*T, F)
+        combined = features.reshape(
+            batch_size,
+            self._num_sources*self._num_timesteps,
+            num_features
+        ) # (B, S*T, F)
 
         return combined
 
