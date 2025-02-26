@@ -56,6 +56,8 @@ class ForcastFactoryEnsemble:
             labelsPerSet
         )
 
+        self._pointsPerSet = pointsPerSet
+
         # Values that are being calculated
         self._raw_data: list[
             tuple[str, float, float, float, float]
@@ -253,7 +255,7 @@ class ForcastFactoryEnsemble:
         # Generates sets
         processor = DataProcessor(data=None, unpack=False)
 
-        sets = [sma_data[i:i + 10] for i in range(len(sma_data) - 10 + 1)]
+        sets = [sma_data[i:i + self._pointsPerSet] for i in range(len(sma_data) - self._pointsPerSet + 1)]
 
         # Creates labels
         test_data, test_labels = processor.generate_labels(sets, 1)
@@ -282,7 +284,7 @@ class ForcastFactoryEnsemble:
         # Generates sets
         processor = DataProcessor(data=None, unpack=False)
 
-        sets = [self._residuals[i:i + 10] for i in range(len(self._residuals) - 10 + 1)]
+        sets = [self._residuals[i:i + self._pointsPerSet] for i in range(len(self._residuals) - self._pointsPerSet + 1)]
 
         # Generates labels
         test_data, test_labels = processor.generate_labels(sets, 1)
