@@ -131,12 +131,18 @@ class Stock:
          # Getting the dates of the stock data
         dates = stock_data.index
 
+        open_ = pd.Series(stock_data['Open'].values.T[0].tolist())
+        high = pd.Series(stock_data['High'].values.T[0].tolist())
+        low = pd.Series(stock_data['Low'].values.T[0].tolist())
+        close = pd.Series(stock_data['Close'].values.T[0].tolist())
+        volume = pd.Series(stock_data['Volume'].values.T[0].tolist())
+
         return (
             dates,
-            stock_data["Open"],
-            stock_data["High"],
-            stock_data["Low"],
-            stock_data["Close"],
-            stock_data["Volume"]
+            open_,
+            high,
+            low,
+            close,
+            volume
             )
     

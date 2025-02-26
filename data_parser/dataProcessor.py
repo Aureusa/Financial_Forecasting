@@ -2,6 +2,8 @@ from copy import deepcopy
 import pandas as pd
 import pandas_ta as ta
 import math
+import numpy as np
+import torch
 
 
 class DataProcessor:
@@ -10,7 +12,7 @@ class DataProcessor:
     """
     def __init__(
             self,
-            data: list[tuple[str,float,float,float,float]]|None,
+            data: list[tuple[str,float,float,float,float]]|None = None,
             unpack: bool = True
             ) -> None:
         """
@@ -37,11 +39,12 @@ class DataProcessor:
 
     def calculate_SMA(
             self,
-            stock_data: list[tuple[float,float,float,float]],
+            stock_data: list[tuple[float,float,float,float]]|None = None,
+            close: list[float]|None = None,
             length: int = 3
             ) -> list[float]:
         """
-        Ccalculates the Simple Moving Average for a
+        Calculates the Simple Moving Average for a
         given dataset over a specified lookback time.
         
         :param stock_data: the stock data of whic to calculate
@@ -54,8 +57,9 @@ class DataProcessor:
         the SMA
         :sets_SMA SMA_list: list[list[Float]]
         """
-        # Unzipping the close
-        _, _, _, close = zip(*stock_data)
+        if stock_data is not None:
+            # Unzipping the close
+            _, _, _, close = zip(*stock_data)
 
         # Creating a dataFrame (required for the pandas_ta module)
         close_pd = pd.DataFrame({"close": []})
@@ -73,8 +77,9 @@ class DataProcessor:
         
     def calculate_residuals(
             self,
-            stock_data: list[tuple[float,float,float,float]],
-            sma: list[float]
+            stock_data: list[tuple[float,float,float,float]]|None,
+            sma: list[float],
+            closing_prices: list[float]|None = None
             ) -> list[float]:
         """
         Calculates the residuals by substracting the closing prices
@@ -85,14 +90,17 @@ class DataProcessor:
         :type stock_data: list[tuple[float,float,float,float]]
         :param sma: the Simple Moving Average of the data.
         :sma type: list[float]
+        :param closing_prices: the closing prices, defaults to None.
+        :closing_prices type: list[float]|None
         :return residuals: the difference between SMA and the closing
         prices.
         :residuals type: list[float]
         """
-        _, _, _, closing_prices = zip(*stock_data)
+        if stock_data is not None:
+            _, _, _, closing_prices = zip(*stock_data)
 
-        nr_of_residuals = len(sma)
-        closing_prices = closing_prices[-nr_of_residuals:]
+            nr_of_residuals = len(sma)
+            closing_prices = closing_prices[-nr_of_residuals:]
 
         residuals = [round(a - b, 2) for a, b in zip(sma, closing_prices)]
 
@@ -139,6 +147,62 @@ class DataProcessor:
             data = self._data[i*pointsPerSet:(i+1)*pointsPerSet]
             allData.append(data)
         return allData
+    
+    def generate_sets_from_metadata(
+            self,
+            residuals_metadata, residuals, sma_metadata, sma, points_per_set, labels_per_set
+            ):
+        # Get the data length
+        data_len = len(residuals_metadata)
+
+        # Define the different lists that hold the sets
+        training_sets_residuals = []
+        labels_residuals = []
+        training_sets_sma = []
+        labels_sma = []
+
+        num_training_dat = points_per_set - labels_per_set
+
+        # Populate the lists
+        for i in range(data_len//points_per_set):
+            res_md = residuals_metadata[i*num_training_dat:(i+1)*num_training_dat]
+            sma_md = sma_metadata[i*num_training_dat:(i+1)*num_training_dat]
+            
+            res = residuals[(i+1)*num_training_dat]
+            savg = sma[(i+1)*num_training_dat]
+
+            training_sets_residuals.append(res_md.tolist())
+            labels_residuals.append(res)
+            training_sets_sma.append(sma_md.tolist())
+            labels_sma.append(savg)
+
+        # Convert to Tensors
+        training_sets_residuals = torch.Tensor(training_sets_residuals)
+        training_sets_sma = torch.Tensor(training_sets_sma)
+        labels_residuals = torch.Tensor(labels_residuals).reshape(-1,1)
+        labels_sma = torch.Tensor(labels_sma).reshape(-1,1)
+
+        return (
+            training_sets_residuals,
+            labels_residuals,
+            training_sets_sma,
+            labels_sma
+        )
+    
+    def compute_rsi(self, closing_prices, period=14):
+        df = pd.DataFrame({"Close": closing_prices})
+        delta = df["Close"].diff(1)  # Calculate daily price changes
+
+        gain = np.where(delta > 0, delta, 0)  # Keep only positive gains
+        loss = np.where(delta < 0, -delta, 0)  # Keep only negative losses
+
+        avg_gain = pd.Series(gain).rolling(window=period, min_periods=1).mean()
+        avg_loss = pd.Series(loss).rolling(window=period, min_periods=1).mean()
+
+        rs = avg_gain / avg_loss  # Relative Strength
+        rsi = 100 - (100 / (1 + rs))  # RSI Calculation
+
+        return rsi.dropna().to_numpy()
 
     def _unpack_data(
             self,

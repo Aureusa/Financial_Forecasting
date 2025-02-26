@@ -46,7 +46,17 @@ class DataReader:
             for dat, op, hi, lo, cl in zip(dates, open_, high, low, close)
             ]
         
-        print(f"Retrieving data for the period `{start_date}` : `{end_date}` ...")
+        if dates is not None:
+            msg = f"|| Successfully retrieving data for the period `{start_date}` : `{end_date}` ||"
+            border = len(msg) * "="
+            message = border + "\n" + msg + "\n" + border
+            print(message)
+        else:
+            msg = f"|| Data retriaval for the period `{start_date}` : `{end_date}` failed! ||"
+            border = len(msg) * "="
+            message = border + "\n" + msg + "\n" + border
+            print(message)
+            raise ValueError("DATA FAILIURE!")
 
         return self.data
     
