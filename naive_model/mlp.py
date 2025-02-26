@@ -255,7 +255,11 @@ class Model:
         try:
             self.model = keras.models.load_model(filepath)
             model_name = filepath.split("\\")[-1]
-            print(f"Model {model_name} loaded successfully!")
+
+            msg = f"|| Model {model_name} loaded successfully! ||"
+            border = len(msg) * "="
+            message = border + "\n" + msg + "\n" + border
+            print(message)
         except FileExistsError(
                 f"No such Model at dir '{filepath}' exists!"
         ) as e:

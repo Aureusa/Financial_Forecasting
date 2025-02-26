@@ -57,7 +57,7 @@ class EnsembleModel:
         all_predictions = []
         all_stds = []
         for dat in data_sets:
-            residuals_tensor = np.array(dat).reshape(1,9)
+            residuals_tensor = np.array(dat).reshape(1,2)
     
             prediction = self._residual_model.predict(residuals_tensor)
 

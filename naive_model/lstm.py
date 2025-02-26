@@ -42,7 +42,7 @@ class LstmModel(Model):
         model_shape = int(architecture[1])
 
         model = Sequential([
-            LSTM(units=model_shape, input_shape=(input_shape, look_back)),
+            LSTM(units=model_shape, input_shape=(input_shape, 2)),
             Dropout(0.123),
             Dense(units=output_size, activation="relu")
         ])
@@ -107,7 +107,7 @@ class LstmModel(Model):
 
         predictions = super().predict(x_test)
 
-        padded_predictions = np.zeros((predictions.shape[0], 9))    # dummy values to avoid input-output shape mismatch
+        padded_predictions = np.zeros((predictions.shape[0], 2))    # dummy values to avoid input-output shape mismatch
         padded_predictions[:, 0] = predictions[:, 0]
 
         y_predictions = self.scaler.inverse_scaled_data(padded_predictions)
@@ -140,7 +140,7 @@ class LstmModel(Model):
             pred = f_model(x_test, training=True).numpy()
             
             # Pad prediction for inverse transformation
-            padded_pred = np.zeros((pred.shape[0], 9))
+            padded_pred = np.zeros((pred.shape[0], 2))
             padded_pred[:, 0] = pred[:, 0]
 
             # Inverse scale each prediction
