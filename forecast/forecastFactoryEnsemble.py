@@ -115,9 +115,10 @@ class ForcastFactoryEnsemble:
 
         predicted_closing_prices = self._predicted_closing_prices
 
-        direction_success_rate = self._calculate_direction_success_rate(predicted_closing_prices, actual_closing_prices)
+        direction_success_rate, directional_arr = self._calculate_direction_success_rate(predicted_closing_prices, actual_closing_prices)
 
-        range_match_success_rate = self._calculate_range_match_success_rate(predicted_closing_prices, actual_closing_prices)
+        # sigma = Standart deviation of the model predictions
+        range_match_success_rate, sigma = self._calculate_range_match_success_rate(predicted_closing_prices, actual_closing_prices)
         
         # Calculate Mean Absolute Error (MAE)
         mae = mean_absolute_error(
@@ -125,9 +126,9 @@ class ForcastFactoryEnsemble:
             predicted_closing_prices
             )
         
-        return mae, direction_success_rate, range_match_success_rate
+        return actual_closing_prices, predicted_closing_prices, directional_arr, sigma, mae, direction_success_rate, range_match_success_rate
     
-    def make_comparison_plot(self, bollinger_band: bool):
+    def make_comparison_plot(self, bollinger_band: bool, stock_name: str, save: bool):
         closing_prices = self._calculate_actual_closing_prices()
 
         dates = [t[0] for t in self._raw_data]
@@ -136,7 +137,12 @@ class ForcastFactoryEnsemble:
 
         plotter = Plotter(closing_prices, self._predicted_closing_prices, dates)
 
-        plotter.comparison_plot(self._predicted_closing_prices_std, bollinger_band)
+        plotter.comparison_plot(
+            predictions_std=self._predicted_closing_prices_std,
+            bollinger_band=bollinger_band,
+            stock_name=stock_name,
+            save=save
+        )
 
     def _calculate_direction_success_rate(self, predicted_closing_prices, actual_closing_prices):
         # Set-up the arrays
@@ -158,7 +164,10 @@ class ForcastFactoryEnsemble:
         # Calculate success rate as the percentage of correct predictions
         success_rate = np.mean(success) * 100
 
-        return success_rate
+        # Get an array with directions filled with 1 (UP) -1 (DOWN)
+        directional_arr = np.where(predictions, 1, -1)
+
+        return success_rate, directional_arr
     
     def _calculate_range_match_success_rate(self, predicted_closing_prices, actual_closing_prices):
         sigma = np.array(self._predicted_closing_prices_std).T[0]
@@ -170,7 +179,7 @@ class ForcastFactoryEnsemble:
 
         success_rate = np.mean(condition) * 100
 
-        return success_rate
+        return success_rate, sigma.tolist()
     
     def _calculate_predicted_closing_prices(self) -> list[float]:
         """
