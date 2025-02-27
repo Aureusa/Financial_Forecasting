@@ -12,7 +12,7 @@ class Plotter:
         self._predicted_closing_prices = predicted_closing_prices
         self._dates = dates
 
-    def comparison_plot(self, predictions_std: list[float]|None = None, bollinger_band: bool = False):
+    def comparison_plot(self, predictions_std: list[float]|None, bollinger_band: bool, stock_name: str, save: bool):
         fig, ax = plt.subplots()
         
         if bollinger_band:
@@ -34,18 +34,6 @@ class Plotter:
         # Add square markers for data points
         ax.scatter(self._dates, self._closing_prices, color="blue", marker="s", label="Actual")
 
-        # if predictions_std is not None:
-        #     self._closing_prices.insert(0, self._closing_prices[0])
-        #     self._closing_prices.pop()
-        #     lower_bound_fill = self._closing_prices
-        #     # Plotting the shaded area for standard deviation (std) range
-        #     plt.fill_between(
-        #         self._dates,  # X-axis values (indices)
-        #         np.array(self._predicted_closing_prices).T[0] - 3 * np.array(predictions_std).T[0],#lower_bound_fill,  # Lower bound (predicted - std)
-        #         np.array(self._predicted_closing_prices).T[0] + 3 * np.array(predictions_std).T[0],  # Upper bound (predicted + std)
-        #         color='red',  # Color of the shaded area
-        #         alpha=0.3,  # Transparency of the shaded area
-        #     )
             
         # Plot the line
         ax.plot(self._dates, self._predicted_closing_prices, color="red")
@@ -56,7 +44,7 @@ class Plotter:
         # Labels and title
         ax.set_xlabel("Date")
         ax.set_ylabel("Price ($)")
-        ax.set_title("Actual vs Predicted closing prices")
+        ax.set_title(f"Actual vs Predicted Closing Prices ({stock_name})")
 
         ax.xaxis.set_major_locator(mdates.WeekdayLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
@@ -64,7 +52,11 @@ class Plotter:
         # Legend
         ax.legend()
 
-        plt.show()
+        if save:
+            plt.savefig(f"{stock_name}.png")
+            plt.close(fig)
+        else:
+            plt.show()
 
     def _calculate_sma(
             self,

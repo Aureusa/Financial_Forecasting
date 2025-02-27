@@ -85,6 +85,11 @@ def train_model(
     
     print("[***** LSTM model trained successfully *****]")
 
+    msg = f"|| Successfully trained ensemble model on `{stockCode}` data ||"
+    border = len(msg) * "="
+    message = border + "\n" + msg + "\n" + border
+    print(message)
+
 def test_model(
         stock_name: str = "AAPL",
         start_date: str = "2024-09-01",
@@ -96,7 +101,8 @@ def test_model(
         interval: str = "1d",
         pointsPerSet: int = 10,
         labelsPerSet: int = 1,
-        bollinger_band: bool = False
+        bollinger_band: bool = False,
+        fig_save: bool = False
         ):
     """
     Tests the Ensemble Model.
@@ -142,13 +148,33 @@ def test_model(
         interval=interval
     )
     
-    # Calculates the Mean Absolute Error of the model
-    mae, direction_success_rate, range_match_success_rate = forcaster.compare_predictions_with_observations()
+    (
+        actual_closing_prices,
+        predicted_closing_prices,
+        directional_arr,
+        sigma,
+        mae,
+        direction_success_rate,
+        range_match_success_rate
+    ) = forcaster.compare_predictions_with_observations()
 
-    forcaster.make_comparison_plot(bollinger_band)
+
+    forcaster.make_comparison_plot(
+        bollinger_band=bollinger_band,
+        stock_name=stock_name,
+        save=fig_save
+    )
     
     print("MAE:", round(mae,2))
     print("DIRECTION SUCCESS RATE:", round(direction_success_rate,2))
     print("RANGE SUCCESS RATE:", round(range_match_success_rate,2))
 
-    return mae, direction_success_rate, range_match_success_rate
+    return (
+        actual_closing_prices,
+        predicted_closing_prices,
+        directional_arr,
+        sigma,
+        mae,
+        direction_success_rate,
+        range_match_success_rate
+    )
