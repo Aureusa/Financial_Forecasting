@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch import Tensor
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 class Model(nn.Module):
     def __init__(
@@ -11,8 +12,6 @@ class Model(nn.Module):
             num_timesteps: int,
             num_sources: int,
             time_combiner_params: dict,
-            source_combiner_params: dict,
-            mlp_layers: list[int],
             lr: float
         ) -> None:
         """
@@ -79,7 +78,7 @@ class Model(nn.Module):
         for _ in range(self._num_timesteps))
 
         # Time and Source transformer
-        self._time_combiner = nn.TransformerEncoderLayer(**time_combiner_params, batch_first=True)
+        self._time_combiner = nn.TransformerEncoderLayer(**time_combiner_params, batch_first=True, dropout=0.2)
         #self._source_combiner = nn.TransformerEncoderLayer(**source_combiner_params, batch_first=True)
 
         self._linear = torch.nn.Sequential(
@@ -88,7 +87,7 @@ class Model(nn.Module):
         )
 
         # Fully connected output MLP
-        # self._mlp = self._build_mlp(self._num_features, mlp_layers)
+        #self._fc_out = self._build_mlp(self._num_features, [42,18])
 
         # Output layer
         self._fc_out = nn.Linear(self._num_features, 1)

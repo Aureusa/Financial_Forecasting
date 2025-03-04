@@ -115,7 +115,7 @@ class ForcastFactoryEnsemble:
 
         predicted_closing_prices = self._predicted_closing_prices
 
-        direction_success_rate, directional_arr = self._calculate_direction_success_rate(predicted_closing_prices, actual_closing_prices)
+        direction_success_rate, directional_arr = self.calculate_direction_success_rate(predicted_closing_prices, actual_closing_prices)
 
         # sigma = Standart deviation of the model predictions
         range_match_success_rate, sigma = self._calculate_range_match_success_rate(predicted_closing_prices, actual_closing_prices)
@@ -144,7 +144,7 @@ class ForcastFactoryEnsemble:
             save=save
         )
 
-    def _calculate_direction_success_rate(self, predicted_closing_prices, actual_closing_prices):
+    def calculate_direction_success_rate(self, predicted_closing_prices, actual_closing_prices):
         # Set-up the arrays
         predicted_closing = np.array(predicted_closing_prices).T[0][1:]
         actual_closing = np.array(actual_closing_prices)[:-1]

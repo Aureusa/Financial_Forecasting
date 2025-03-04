@@ -3,8 +3,9 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Dropout  # type: ignore
 from tensorflow.keras.layers import LSTM  # type: ignore
 from tensorflow.keras.models import Sequential  # type: ignore
-from naive_model import Model
 
+
+from naive_model import Model
 from naive_model.normalizer import DataNormalizer
 
 

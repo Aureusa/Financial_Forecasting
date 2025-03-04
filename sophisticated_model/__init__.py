@@ -2,9 +2,11 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
+import numpy as np
 
 from data_parser.dataFactory import StockDataFactory, device
 from sophisticated_model.model import Model
+
 
 def train_sophisticated_model():
     datafactory = StockDataFactory("AAPL", 3, 1)
@@ -27,45 +29,45 @@ def train_sophisticated_model():
 
     ###### FEATURES ######
 
-    # Reshape data: (batch_size, timestep, sources) → (batch_size * timestep, sources)
-    train_reshaped_sma = training_sets_sma.reshape(-1, training_sets_sma.shape[-1]).cpu().numpy()
-    test_reshaped_sma = testing_sets_sma.reshape(-1, testing_sets_sma.shape[-1]).cpu().numpy()
-    train_reshaped_res = training_sets_residuals.reshape(-1, training_sets_residuals.shape[-1]).cpu().numpy()
-    test_reshaped_res = testing_sets_residuals.reshape(-1, testing_sets_residuals.shape[-1]).cpu().numpy()
+    # # Reshape data: (batch_size, timestep, sources) → (batch_size * timestep, sources)
+    # train_reshaped_sma = training_sets_sma.reshape(-1, training_sets_sma.shape[-1]).cpu().numpy()
+    # test_reshaped_sma = testing_sets_sma.reshape(-1, testing_sets_sma.shape[-1]).cpu().numpy()
+    # train_reshaped_res = training_sets_residuals.reshape(-1, training_sets_residuals.shape[-1]).cpu().numpy()
+    # test_reshaped_res = testing_sets_residuals.reshape(-1, testing_sets_residuals.shape[-1]).cpu().numpy()
     
-    # Fit MinMaxScaler on sma data
-    scaler_sma = MinMaxScaler(feature_range=(0, 1))
-    train_scaled_sma = scaler_sma.fit_transform(train_reshaped_sma)
-    test_scaled_sma = scaler_sma.fit_transform(test_reshaped_sma)
+    # # Fit MinMaxScaler on sma data
+    # scaler_sma = MinMaxScaler(feature_range=(0, 1))
+    # train_scaled_sma = scaler_sma.fit_transform(train_reshaped_sma)
+    # test_scaled_sma = scaler_sma.fit_transform(test_reshaped_sma)
 
-    # Fit MinMaxScaler on residuals data
-    scaler_res = MinMaxScaler(feature_range=(0, 1))
-    train_scaled_residuals = scaler_res.fit_transform(train_reshaped_res)
-    test_scaled_residuals = scaler_res.fit_transform(test_reshaped_res)
+    # # Fit MinMaxScaler on residuals data
+    # scaler_res = MinMaxScaler(feature_range=(0, 1))
+    # train_scaled_residuals = scaler_res.fit_transform(train_reshaped_res)
+    # test_scaled_residuals = scaler_res.fit_transform(test_reshaped_res)
 
-    ###### LABELS ######
+    # ###### LABELS ######
 
-    # Fit MinMaxScaler on labels residuals
-    scaler_res_label = MinMaxScaler(feature_range=(0, 1))
-    training_labels_scaled_residuals = scaler_res_label.fit_transform(training_labels_residuals.cpu().numpy())
-    testing_labels_scaled_residuals = scaler_res_label.fit_transform(testing_labels_residuals.cpu().numpy())
+    # # Fit MinMaxScaler on labels residuals
+    # scaler_res_label = MinMaxScaler(feature_range=(0, 1))
+    # training_labels_scaled_residuals = scaler_res_label.fit_transform(training_labels_residuals.cpu().numpy())
+    # testing_labels_scaled_residuals = scaler_res_label.fit_transform(testing_labels_residuals.cpu().numpy())
 
-    # Fit MinMaxScaler on labels data sma
-    scaler_sma_label = MinMaxScaler(feature_range=(0, 1))
-    training_labels_scaled_sma = scaler_sma_label.fit_transform(training_labels_sma.cpu().numpy())
-    testing_labels_scaled_sma = scaler_sma_label.fit_transform(testing_labels_sma.cpu().numpy())
+    # # Fit MinMaxScaler on labels data sma
+    # scaler_sma_label = MinMaxScaler(feature_range=(0, 1))
+    # training_labels_scaled_sma = scaler_sma_label.fit_transform(training_labels_sma.cpu().numpy())
+    # testing_labels_scaled_sma = scaler_sma_label.fit_transform(testing_labels_sma.cpu().numpy())
 
 
-    # Reshape back to (batch_size, timestep, sources)
-    training_sets_sma = torch.tensor(train_scaled_sma, dtype=torch.float32).reshape(training_sets_sma.shape).to(device)
-    testing_sets_sma = torch.tensor(test_scaled_sma, dtype=torch.float32).reshape(testing_sets_sma.shape).to(device)
-    training_sets_residuals = torch.tensor(train_scaled_residuals, dtype=torch.float32).reshape(training_sets_residuals.shape).to(device)
-    testing_sets_residuals = torch.tensor(test_scaled_residuals, dtype=torch.float32).reshape(testing_sets_residuals.shape).to(device)
+    # # Reshape back to (batch_size, timestep, sources)
+    # training_sets_sma = torch.tensor(train_scaled_sma, dtype=torch.float32).reshape(training_sets_sma.shape).to(device)
+    # testing_sets_sma = torch.tensor(test_scaled_sma, dtype=torch.float32).reshape(testing_sets_sma.shape).to(device)
+    # training_sets_residuals = torch.tensor(train_scaled_residuals, dtype=torch.float32).reshape(training_sets_residuals.shape).to(device)
+    # testing_sets_residuals = torch.tensor(test_scaled_residuals, dtype=torch.float32).reshape(testing_sets_residuals.shape).to(device)
 
-    training_labels_scaled_residuals = torch.tensor(training_labels_scaled_residuals).to(device)
-    testing_labels_scaled_residuals = torch.tensor(testing_labels_scaled_residuals).to(device)
-    training_labels_scaled_sma = torch.tensor(training_labels_scaled_sma).to(device)
-    testing_labels_scaled_sma = torch.tensor(testing_labels_scaled_sma).to(device)
+    # training_labels_scaled_residuals = torch.tensor(training_labels_scaled_residuals).to(device)
+    # testing_labels_scaled_residuals = torch.tensor(testing_labels_scaled_residuals).to(device)
+    # training_labels_scaled_sma = torch.tensor(training_labels_scaled_sma).to(device)
+    # testing_labels_scaled_sma = torch.tensor(testing_labels_scaled_sma).to(device)
 
 
 
@@ -79,12 +81,12 @@ def train_sophisticated_model():
     # testing_dataset_sma = TensorDataset(testing_sets_sma, testing_labels_sma)
 
     # Generate the dataset for the residual model
-    training_dataset_residual = TensorDataset(training_sets_residuals, training_labels_scaled_residuals)
-    testing_dataset_residual = TensorDataset(testing_sets_residuals, testing_labels_scaled_residuals)
+    training_dataset_residual = TensorDataset(training_sets_residuals, training_labels_residuals)
+    testing_dataset_residual = TensorDataset(testing_sets_residuals, testing_labels_residuals)
 
     # Generate the dataset for the sma model
-    training_dataset_sma = TensorDataset(training_sets_sma, training_labels_scaled_sma)
-    testing_dataset_sma = TensorDataset(testing_sets_sma, testing_labels_scaled_sma)
+    training_dataset_sma = TensorDataset(training_sets_sma, training_labels_sma)
+    testing_dataset_sma = TensorDataset(testing_sets_sma, testing_labels_sma)
 
     # Create a training DataLoader
     training_loader_residual = DataLoader(training_dataset_residual, batch_size=64)
@@ -98,34 +100,36 @@ def train_sophisticated_model():
     T = 2
     S_res = 6
     S_sma = 10
-    F = 256
+    F = 64#256
+    F = 48
 
-    time_combiner_params = {
+    time_combiner_params_mlp = {
         "d_model": F,
         "nhead": 1,
-        "dim_feedforward": 512,
+        "dim_feedforward": 192#248#346#512,
     }
 
-    source_combiner_params = {
+    F = 36
+    F = 64#256
+
+    time_combiner_params_lstm = {
         "d_model": F,
         "nhead": 1,
-        "dim_feedforward": 512,
+        "dim_feedforward": 248#346#512,
     }
-
-    mlp_layers = [F, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2]
 
     # Creating the residual model
-    model_res = Model(T,S_res,time_combiner_params,source_combiner_params,mlp_layers,0.001)
+    model_res = Model(T,S_res,time_combiner_params_mlp,0.001)
     model_res.to(device)
 
     # Creating the sma model
-    model_sma = Model(T,S_sma,time_combiner_params,source_combiner_params,mlp_layers,0.001)
+    model_sma = Model(T,S_sma,time_combiner_params_lstm,0.001)
     model_sma.to(device)
 
     # Train the model
-    model_res.train_model(training_loader_residual, epochs=500)
+    model_res.train_model(training_loader_residual, epochs=3550)
     model_res.make_loss_plot("residual_model")
-    model_sma.train_model(training_loader_sma, epochs=500)
+    model_sma.train_model(training_loader_sma, epochs=5550)
     model_sma.make_loss_plot("sma_model")
 
     # Test the model
@@ -133,13 +137,34 @@ def train_sophisticated_model():
     predicted_sma = model_sma(testing_sets_sma)
 
     # Scale predictions
-    predicted_res_scaled = scaler_res_label.inverse_transform(predicted_res.detach().cpu().numpy())
-    predicted_sma_scaled = scaler_sma_label.inverse_transform(predicted_sma.detach().cpu().numpy())
+    predicted_res_scaled = predicted_res.detach().cpu().numpy()
+    predicted_sma_scaled = predicted_sma.detach().cpu().numpy()
 
     predicted_closing = predicted_sma_scaled + predicted_res_scaled
 
     actual_closing = testing_labels_residuals + testing_labels_sma
     actual_closing = actual_closing.cpu().numpy()
+
+    # Set-up the arrays
+    predicted_closing_succ = np.array(predicted_closing).T[0][1:]
+    actual_closing_succ = np.array(actual_closing)[:-1]
+    actual_closing_prices = np.array(actual_closing)
+
+    # Check whether the predictions indicate an upward trend
+    # this is an array containing True (if cond in met) False otherwise
+    predictions = predicted_closing_succ > actual_closing_succ
+
+    # Check wether there is an upward trend, if the next actual closing
+    # price is greater than the previous one set to True, otherwise False
+    ground_truth = actual_closing_prices[:-1] < actual_closing_prices[1:]
+
+    # Compare predictions with ground_truth (element-wise equality)
+    success = predictions == ground_truth
+
+    # Calculate success rate as the percentage of correct predictions
+    success_rate = np.mean(success) * 100
+
+    print(f"Success Rate: {success_rate} %")
 
     plt.plot(predicted_closing, label="Predicted Closing")
     plt.plot(actual_closing, label="Actual Closing")
