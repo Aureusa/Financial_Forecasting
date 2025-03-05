@@ -30,8 +30,12 @@ class DataReader:
     def get_data(
             self,
             start_date: str,
-            end_date: str
+            end_date: str,
+            stock_name: str|None = None
             ) -> tuple[datetime, Series, Series, Series, Series]:
+        if stock_name is not None:
+            self.stock_name = stock_name
+            
         # Validate dates
         self._validate_date(start_date)
         self._validate_date(end_date)

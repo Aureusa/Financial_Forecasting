@@ -1,13 +1,136 @@
-import numpy as np
-import pandas as pd
+# import numpy as np
+# import pandas as pd
 
-from market.stock_environment import TradingEnv
-from naive_model import test_model, train_model
-from sophisticated_model import train_sophisticated_model
+# from market.static import TradingEnv
+# from naive_model import test_model, train_model
+# from sophisticated_model import train_sophisticated_model
+
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import pickle
+from datetime import datetime
+
+def plot_portfolio(dates, portfolio):
+    # Convert string dates to datetime objects
+    dates = [datetime.strptime(date, '%Y-%m-%d') for date in dates]
+    
+    plt.figure(figsize=(10, 5))
+    plt.plot(dates, portfolio, label='Portfolio Value')
+    plt.xlabel('Dates')
+    plt.ylabel('Portfolio Value')
+    plt.title('Portfolio Value Over Time')
+    plt.legend()
+    plt.grid(True)
+    
+    # Format the x-axis to show only the month
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+    
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+def plot_actual_vs_predicted(dates, actual_prices_dict, predicted_prices_dict):
+    # Convert string dates to datetime objects
+    dates = [datetime.strptime(date, '%Y-%m-%d') for date in dates]
+    
+    plt.figure(figsize=(10, 5))
+    
+    for stock in actual_prices_dict.keys():
+        actual_prices = actual_prices_dict[stock]
+        predicted_prices = predicted_prices_dict[stock]
+        
+        plt.plot(dates, actual_prices, label=f'{stock} Actual')
+        plt.plot(dates, predicted_prices, label=f'{stock} Predicted', linestyle='--')
+    
+    plt.xlabel('Dates')
+    plt.ylabel('Prices')
+    plt.title('Actual vs Predicted Prices Over Time')
+    plt.legend()
+    plt.grid(True)
+    
+    # Format the x-axis to show only the month
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+    
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+def compute_success_rate(dir_predictions, dir_ground_truth):
+    total_predictions = 0
+    correct_predictions = 0
+    
+    for stock in dir_predictions.keys():
+        predicted_directions = dir_predictions[stock]
+        actual_directions = dir_ground_truth[stock]
+        
+        for pred, actual in zip(predicted_directions, actual_directions):
+            total_predictions += 1
+            if pred == actual:
+                correct_predictions += 1
+    
+    success_rate = correct_predictions / total_predictions if total_predictions > 0 else 0
+    return success_rate
 
 
 if __name__ == "__main__":
-    print("ss")
+    def load_state(filename: str):
+        with open(filename, 'rb') as f:
+            state = pickle.load(f)
+        return state
+    
+    state = load_state("checkpoint_250.pkl")
+    
+    portfolio = state["portfolio"]
+    portfolio.pop()
+    dates = state["trading_dates"]["AAPL"]
+    
+    actual_prices_dict = state["real_closing_prices"]
+    predicted_prices_dict = state["predicted_closing_prices"]
+
+    dir_predictions = state["dir_predictions"]
+    dir_ground_truth = state["dir_ground_truth"]
+
+    plot_portfolio(dates, portfolio)
+
+    plot_actual_vs_predicted(dates, actual_prices_dict, predicted_prices_dict)
+
+    print(compute_success_rate(dir_predictions, dir_ground_truth))
+
+
+
+    from market.dynamic import TradingEnv
+    
+    stock_codes = ["TSLA", "MSFT", "AMZN", "AAPL"]
+    env = TradingEnv(
+        stock_codes=stock_codes,
+        start_date="2012-01-01",
+        end_date="2025-03-01",
+        points_per_set=3,
+        labels_per_set=1,
+        lookback=3,
+        initial_balance=10000
+    )
+
+    done = False
+
+    while not done:
+        done = env.yolooo()
+    
+    env.save_state("og_state.pkl")
+
+    # train_model(stockCode="NVDA",start_date="2010-09-01", end_date="2024-12-23", pointsPerSet=3)
+    # test_model(
+    #     stock_name="NVDA",
+    #     start_date ="2024-12-23",
+    #     end_date = "2025-03-05",
+    #     residual_model = "mlp_filename_placeholder_model.keras",
+    #     residual_model_folder = "mlp__foldername_placeholder",
+    #     trend_model = "lstm_filename_placeholder_model.keras",
+    #     trend_model_folder = "lstm__foldername_placeholder",
+    #     pointsPerSet = 3
+    # )
     #  stock_codes = ["ADA-USD", "TSLA", "MSFT", "AMZN"]
 
     # for stock in stock_codes:
