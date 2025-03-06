@@ -194,3 +194,75 @@ def compute_success_rate(dir_predictions, dir_ground_truth):
     #     env.render()
 
     # env.plot_portfolio()
+
+
+
+
+
+
+    
+# state_0 = load_state("checkpoint_1000_alpha_0.pkl")
+    # state_25 = load_state("checkpoint_1000_alpha_25.0.pkl")
+    # state_50 = load_state("checkpoint_1000_alpha_50.0.pkl")
+    # state_75 = load_state("checkpoint_1000_alpha_75.0.pkl")
+
+    # dir_predictions_0 = state_0["dir_predictions"] 
+    # dir_predictions_25 = state_25["dir_predictions"] 
+    # dir_predictions_50 = state_50["dir_predictions"] 
+    # dir_predictions_75 = state_75["dir_predictions"] 
+
+    # dir_ground_truth_0 = state_0["dir_ground_truth"]
+    # dir_ground_truth_25 = state_25["dir_ground_truth"]
+    # dir_ground_truth_50 = state_50["dir_ground_truth"]
+    # dir_ground_truth_75 = state_75["dir_ground_truth"]
+
+    # portfolio_0 = state_0["portfolio"]
+    # portfolio_25 = state_25["portfolio"]
+    # portfolio_50 = state_50["portfolio"]
+    # portfolio_75 = state_75["portfolio"]
+
+    # portfolio_0.pop(0)
+    # portfolio_25.pop(0)
+    # portfolio_50.pop(0)
+    # portfolio_75.pop(0)
+
+    # trading_dates_0 = state_0["trading_dates"]
+    # trading_dates_25 = state_25["trading_dates"]
+    # trading_dates_50 = state_50["trading_dates"]
+    # trading_dates_75 = state_75["trading_dates"]
+
+    # print(trading_dates_0["TSLA"][100], trading_dates_0["TSLA"][-1])
+    # print(trading_dates_25["TSLA"][100], trading_dates_25["TSLA"][-1])
+    # print(trading_dates_50["TSLA"][100], trading_dates_50["TSLA"][-1])
+    # print(trading_dates_75["TSLA"][100], trading_dates_75["TSLA"][-1])
+
+    # This section of the code is performing the following tasks:
+    # predicted_closing_prices_0 = state_0["predicted_closing_prices"]
+    # predicted_closing_prices_25 = state_25["predicted_closing_prices"]
+    # predicted_closing_prices_50 = state_50["predicted_closing_prices"]
+    # predicted_closing_prices_75 = state_75["predicted_closing_prices"]
+
+    # real_closing_prices_0 = state_0["real_closing_prices"]
+    # real_closing_prices_25 = state_25["real_closing_prices"]
+    # real_closing_prices_50 = state_50["real_closing_prices"]
+    # real_closing_prices_75 = state_75["real_closing_prices"]
+
+    # success_rate_0 = compute_success_rate(dir_predictions_0, dir_ground_truth_0)
+    # success_rate_25 = compute_success_rate(dir_predictions_25, dir_ground_truth_25)
+    # success_rate_50 = compute_success_rate(dir_predictions_50, dir_ground_truth_50)
+    # success_rate_75 = compute_success_rate(dir_predictions_75, dir_ground_truth_75)
+
+    # print(f"Success rate for alpha=0: {success_rate_0}")
+    # print(f"Success rate for alpha=0.25: {success_rate_25}")
+    # print(f"Success rate for alpha=0.50: {success_rate_50}")
+    # print(f"Success rate for alpha=0.75: {success_rate_75}")
+
+    # plot_portfolio(trading_dates_0["TSLA"], portfolio_0)
+    # plot_portfolio(trading_dates_25["TSLA"], portfolio_25)
+    # plot_portfolio(trading_dates_50["TSLA"], portfolio_50)
+    # plot_portfolio(trading_dates_75["TSLA"], portfolio_75)
+
+    # plot_actual_vs_predicted(trading_dates_0["TSLA"], real_closing_prices_0, predicted_closing_prices_0)
+    # plot_actual_vs_predicted(trading_dates_25["TSLA"], real_closing_prices_25, predicted_closing_prices_25)
+    # plot_actual_vs_predicted(trading_dates_50["TSLA"], real_closing_prices_50, predicted_closing_prices_50)
+    # plot_actual_vs_predicted(trading_dates_75["TSLA"], real_closing_prices_75, predicted_closing_prices_75)
