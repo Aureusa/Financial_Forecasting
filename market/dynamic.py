@@ -25,8 +25,11 @@ class TradingEnv:
             points_per_set: int,
             labels_per_set: int,
             lookback: int = 3,
-            initial_balance: int = 1000
+            initial_balance: int = 1000,
+            alpha: float = 0
         ):
+        self.alpha_val = alpha
+
         # Forge data
         self.stock_codes, self.stocks_features, self.stocks_labels = DataMaker().forge_data(
             stock_codes=stock_codes,
@@ -100,7 +103,7 @@ class TradingEnv:
     
     def yolooo(self, dollars_per_trade: int = 100, transaction_fee: float = 0.00):
         if self.current_step in CHECKPOINT_FREQUENCY:
-            filename = f"checkpoint_{self.current_step}.pkl"
+            filename = f"checkpoint_{self.current_step}_alpha_{self.alpha_val*100}.pkl"
             self.save_state(filename)
             
         if self.current_step in RETRAIN_FREQUENCY:
@@ -281,7 +284,7 @@ class TradingEnv:
                     training_data_mlp=training_data_mlp,
                     training_labels_mlp=training_labels_mlp,
                     epochs=50,
-                    alpha=0,
+                    alpha=self.alpha_val,
                     old_mlp_model=old_mlp_model,
                     old_lstm_model=old_lstm_model
                 )
