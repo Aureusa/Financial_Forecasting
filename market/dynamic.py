@@ -111,9 +111,9 @@ class TradingEnv:
         done = self.current_step >= self.done_cond
 
         # Get the current prices
-        current_prices = self.stocks_labels[:,CLOSING_DATA,self.current_step,0].astype(np.float32)
+        current_prices = self.stocks_labels[:,CLOSING_DATA,TRAINING_WINDOW+self.current_step,0].astype(np.float32)
 
-        current_dates = self.stocks_features[:,DATES_DATA,self.current_step,0]
+        current_dates = self.stocks_features[:,DATES_DATA,TRAINING_WINDOW+self.current_step,0]
 
         # Take action
         self._take_action(current_prices, current_dates, dollars_per_trade, transaction_fee)
