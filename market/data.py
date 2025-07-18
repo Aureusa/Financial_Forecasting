@@ -3,10 +3,17 @@ import numpy as np
 import pandas_ta as ta
 import math
 
-from data_parser.stockGetter import Stock
+from data_pipeline.stockGetter import Stock
 
 
 class DataMaker:
+    """
+    A class to forge data for testing the model in a real-world scenario.
+    It generates sets of stock data, including dates, closing prices,
+    Simple Moving Averages (SMA), and residuals, based on the stock codes
+    provided. The data is sliced into sets of points and labels, which can
+    be used for training and testing machine learning models.
+    """
     def forge_data(
             self,
             stock_codes: list[str],
@@ -30,6 +37,8 @@ class DataMaker:
         :type points_per_set: int
         :param labels_per_set: the number of labels
         :type labels_per_set: int
+        :param lookback: the number of past points to be considered for the Simple Moving Average (SMA)
+        :type lookback: int, optional
         :return: returns a tuple containg:
             stock_codes (as np.ndarray)
             stocks_features (as np.ndarray):
@@ -155,7 +164,7 @@ class DataMaker:
         :type close: list[flaot]
         :param lookback: the number of past points to be considered
         :type lookback: int
-        :return: the simmple moving average of the data as well as the
+        :return: the simple moving average of the data as well as the
         sliced closing prices (to match the len of the SMA)
         :rtype: tuple
         """

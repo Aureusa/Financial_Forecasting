@@ -30,6 +30,9 @@ class Stock:
         :param interval: The interval you want
         :type interval: str
         """
+        self._validate_date(start_date)
+        self._validate_date(end_date)
+        
         self.name = name
         self.start_date = start_date 
         self.end_date = end_date
@@ -52,13 +55,20 @@ class Stock:
         """
         The method returns the stock prices.
 
-        :return: The stock data
+        :return: The stock data in the following format
+            tuple[
+                Date,
+                Open,
+                High,
+                Low,
+                Close,
+                ]
         :type return: tuple[
                 datetime,
                 Series,
                 Series,
                 Series,
-                Series
+                Series,
                 ]
         """
         # Getting the dates of the stock data
@@ -69,7 +79,11 @@ class Stock:
             interval=self.interval
             )
         
-         # Getting the dates of the stock data
+        # Check if stock_data is empty
+        if stock_data.empty:
+            raise ValueError(f"No data found for stock {self.name} between {self.start_date} and {self.end_date}")
+        
+        # Getting the dates of the stock data
         dates = stock_data.index
 
         open_ = pd.Series(stock_data['Open'].values.T[0].tolist())
@@ -83,11 +97,6 @@ class Stock:
             low,
             close
         )
-            # stock_data['Open'],
-            # stock_data['High'],
-            # stock_data['Low'],
-            # stock_data['Close']
-            # )
     
     def get_all_data(
             self
@@ -145,4 +154,21 @@ class Stock:
             close,
             volume
             )
+    
+    def _validate_date(self, date: str) -> None:
+        """
+        Validates the date.
+
+        :param date: the date
+        :type date: str
+        :raises TypeError: wrong date format
+        """
+        if not isinstance(date, str):
+            raise TypeError(
+                "You must provide type=`str` as date in the form:"
+                f" yyyy-mm-dd. You provided: type=`{type(date)}`")
+        try:
+            datetime.strptime(date, '%Y-%m-%d')
+        except TypeError("The date must be of the form `yyyy-mm-dd`!") as e:
+            raise e
     

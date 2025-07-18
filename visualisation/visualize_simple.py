@@ -8,11 +8,26 @@ import math
 
 class Plotter:
     def __init__(self, closing_prices, predicted_closing_prices, dates):
+        """
+        Initializes the Plotter with closing prices, predicted closing prices, and dates.
+        
+        :param closing_prices: List of actual closing prices.
+        :param predicted_closing_prices: List of predicted closing prices.
+        :param dates: List of dates corresponding to the closing prices.
+        """
         self._closing_prices = closing_prices
         self._predicted_closing_prices = predicted_closing_prices
         self._dates = dates
 
     def comparison_plot(self, predictions_std: list[float]|None, bollinger_band: bool, stock_name: str, save: bool):
+        """
+        Plots the actual vs predicted closing prices with optional Bollinger Bands.
+
+        :param predictions_std: List of standard deviations for the predicted prices.
+        :param bollinger_band: Whether to include Bollinger Bands in the plot.
+        :param stock_name: Name of the stock for labeling the plot.
+        :param save: Whether to save the plot as a file.
+        """
         fig, ax = plt.subplots()
         
         if bollinger_band:
@@ -62,7 +77,17 @@ class Plotter:
             self,
             close: list[float],
             length: int = 3
-            ) -> list[float]:
+        ) -> list[float]:
+        """
+        Calculates the Simple Moving Average (SMA) for a given list of closing prices.
+
+        :param close: List of closing prices.
+        :type close: list[float]
+        :param length: The number of periods to calculate the SMA over.
+        :type length: int
+        :return: A list of SMA values.
+        :rtype: list[float]
+        """
         # Creating a dataFrame (required for the pandas_ta module)
         close_pd = pd.DataFrame({"close": []})
         close_pd["close"] = close

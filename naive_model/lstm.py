@@ -4,8 +4,7 @@ from tensorflow.keras.layers import Dense, Dropout  # type: ignore
 from tensorflow.keras.layers import LSTM  # type: ignore
 from tensorflow.keras.models import Sequential  # type: ignore
 
-
-from naive_model import Model
+from naive_model.mlp import Model
 from naive_model.normalizer import DataNormalizer
 
 
@@ -13,8 +12,10 @@ class LstmModel(Model):
     """
     The base class for LSTM models.
     """
-
     def __init__(self):
+        """
+        Initializes the LSTM model with a data normalizer.
+        """
         super().__init__()
         self.scaler = DataNormalizer()
 
@@ -156,3 +157,4 @@ class LstmModel(Model):
         std_rescaled = preds_rescaled.std(axis=0)
 
         return mean_rescaled, std_rescaled
+    

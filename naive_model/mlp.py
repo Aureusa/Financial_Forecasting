@@ -6,16 +6,19 @@ from tensorflow import keras
 from tensorflow.keras.models import Sequential # type: ignore
 from tensorflow.keras.layers import Dense,Input,BatchNormalization,Dropout # type: ignore
 from tensorflow.keras.optimizers import Adam # type: ignore
-from tensorflow.keras.callbacks import EarlyStopping # type: ignore
 from sklearn.metrics import mean_absolute_error
 
 
 class Model:
     """
-    Used as an interface between keras' sequential model
-    (that is used to create an MLP).
+    The base class for all models.
+    It provides a common interface for all models, including methods for creating,
+    compiling, training, and predicting.
+    It also includes methods for saving and loading models, as well as for computing
+    the mean absolute error of the model.
+    It is designed to be extended by specific model implementations, such as MLP or LSTM models.
+    It includes a method for reshaping input data to be compatible with the model.
     """
-
     def __init__(self):
         """
         Instantiates a model.
@@ -113,7 +116,6 @@ class Model:
         updating weights.
         :type batch_size: int
         """
-
         self._model_validator()
 
         # Stops training when validation performance stops improving
@@ -225,7 +227,7 @@ class Model:
         self._model_validator()
 
         # Defining the folder to store all the models
-        models_folder = os.path.join(os.getcwd(), "models")
+        models_folder = os.path.join(os.getcwd(), "saved_models")
 
         # Particular folder to store the model
         desired_folder = os.path.join(models_folder, folderName)

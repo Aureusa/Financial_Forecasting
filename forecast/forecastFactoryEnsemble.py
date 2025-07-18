@@ -1,15 +1,13 @@
 from sklearn.metrics import mean_absolute_error
-import tensorflow as tf
 import numpy as np
 from typing import Any
 
-from data_parser.dataFactory import StockDataFactory
-from data_parser.dataProcessor import DataProcessor
+from data_pipeline import DataPipeline
 from forecast.ensembleModel import EnsembleModel
 from visualisation.visualize_simple import Plotter
 
 
-class ForcastFactoryEnsemble:
+class ForecastFactoryEnsemble:
     """
     This class provides a way to test the forcasting abilities of an
     Ensemble model.
@@ -25,7 +23,7 @@ class ForcastFactoryEnsemble:
             labelsPerSet: int
             ) -> None:
         """
-        A way of instantiating ForcastFactoryEnsemble.
+        A way of instantiating ForecastFactoryEnsemble.
 
         :param stock_name: the stock code.
         :type stock_name: str
@@ -49,14 +47,8 @@ class ForcastFactoryEnsemble:
             residual_model, residual_model_folder, trend_model, trend_model_folder
         )
 
-        # Initialize a StockDataFactory
-        self._data_factory = StockDataFactory(
-            stock_name,
-            pointsPerSet,
-            labelsPerSet
-        )
-
         self._pointsPerSet = pointsPerSet
+        self._labelsPerSet = labelsPerSet
 
         # Values that are being calculated
         self._raw_data: list[
@@ -78,22 +70,26 @@ class ForcastFactoryEnsemble:
             interval: str = "1d"
             ) -> None:
         """
-        Predicts the closing prices and residuals.
+        Predicts the closing prices of the stock using the ensemble model.
 
-        :param raw_data_amount: the amount of raw data to be generated,
-        used for the plotting faculties of this factory as well, defaults to 50
-        :type raw_data_amount: int, optional
-        :param sma_lookback_period: the lookback time used to calculate
-        the simple moving average (this is a hyperparameter for the ML model),
-        defaults to 3
-        :type sma_lookback_period: int, optional
-        :param end_date: the end date of the raw data retrieval,
-        defaults to "2024-09-01"
-        :type end_date: str, optional
-        :param interval: the scale of the candles, defaults to "1d"
-        :type interval: str, optional
+        :param start_date: the start date of the data retrieval
+        :type start_date: str
+        :param end_date: the end date of the data retrieval
+        :type end_date: str
+        :param sma_lookback_period: the lookback period used to compute the SMA
+        :type sma_lookback_period: int
+        :param interval: the scale of the candlesticks
+        :type interval: str
         """
-        self._get_raw_data(start_date, end_date, interval)
+        # Initialize the DataPipeline
+        self._data_pipeline = DataPipeline(
+            self._stock_name,
+            start_date,
+            end_date,
+            interval
+        )
+
+        self._raw_data = self._data_pipeline.get_raw_data()
 
         self._predict_residuals(sma_lookback_period)
 
@@ -101,13 +97,13 @@ class ForcastFactoryEnsemble:
 
         self._predicted_closing_prices, self._predicted_closing_prices_std = self._calculate_predicted_closing_prices()
 
-    def compare_predictions_with_observations(self) -> float:
+    def compare_predictions_with_observations(self) -> tuple[list[float], list[float], np.ndarray, list[float], float, float, float]:
         """
-        Compare the model's predictions with the actual observed data.
+        Compares the predicted closing prices with the actual closing prices.
 
-        :return: the mean absolute error of the observed closing prices
-        and the predicted closing prices
-        :rtype: float
+        :return: a tuple containing the actual closing prices, predicted closing prices,
+        directional array, sigma, mean absolute error, direction success rate, and range match success rate
+        :rtype: tuple[list[float], list[float], np.ndarray, list[float], float, float, float]
         """
         self._validate_predictions(self._predicted_closing_prices)
 
@@ -129,6 +125,16 @@ class ForcastFactoryEnsemble:
         return actual_closing_prices, predicted_closing_prices, directional_arr, sigma, mae, direction_success_rate, range_match_success_rate
     
     def make_comparison_plot(self, bollinger_band: bool, stock_name: str, save: bool):
+        """
+        Makes a comparison plot of the predicted closing prices and the actual closing prices.
+        
+        :param bollinger_band: whether to include the Bollinger band in the plot
+        :type bollinger_band: bool
+        :param stock_name: the name of the stock
+        :type stock_name: str
+        :param save: whether to save the plot
+        :type save: bool
+        """
         closing_prices = self._calculate_actual_closing_prices()
 
         dates = [t[0] for t in self._raw_data]
@@ -144,7 +150,21 @@ class ForcastFactoryEnsemble:
             save=save
         )
 
-    def calculate_direction_success_rate(self, predicted_closing_prices, actual_closing_prices):
+    def calculate_direction_success_rate(
+            self,
+            predicted_closing_prices: list[float],
+            actual_closing_prices: list[float]
+        ) -> tuple[float, np.ndarray]:
+        """
+        Calculates the success rate of the direction predictions.
+
+        :param predicted_closing_prices: the predicted closing prices
+        :type predicted_closing_prices: list[float]
+        :param actual_closing_prices: the actual closing prices
+        :type actual_closing_prices: list[float]
+        :return: a tuple containing the success rate and the directional array
+        :rtype: tuple[float, np.ndarray]
+        """
         # Set-up the arrays
         predicted_closing = np.array(predicted_closing_prices).T[0][1:]
         actual_closing = np.array(actual_closing_prices)[:-1]
@@ -169,7 +189,21 @@ class ForcastFactoryEnsemble:
 
         return success_rate, directional_arr
     
-    def _calculate_range_match_success_rate(self, predicted_closing_prices, actual_closing_prices):
+    def _calculate_range_match_success_rate(
+            self,
+            predicted_closing_prices: list[float],
+            actual_closing_prices: list[float]
+        ) -> tuple[float, list[float]]:
+        """
+        Calculates the success rate of the range match predictions.
+
+        :param predicted_closing_prices: the predicted closing prices
+        :type predicted_closing_prices: list[float]
+        :param actual_closing_prices: the actual closing prices
+        :type actual_closing_prices: list[float]
+        :return: a tuple containing the success rate and the sigma
+        :rtype: tuple[float, list[float]]
+        """
         sigma = np.array(self._predicted_closing_prices_std).T[0]
 
         upper_bound = np.array(predicted_closing_prices).T[0] + 3 * sigma
@@ -231,19 +265,22 @@ class ForcastFactoryEnsemble:
         """
         # Calculate the SMA
         self._sma_lookback_period = sma_lookback_period
-        self._sma = self._data_factory.get_sma(
-            self._raw_data,
-            self._sma_lookback_period
-            )
+        self._sma = self._data_pipeline.get_sma(sma_lookback_period)
         
         # Calculate the residuals
-        self._residuals = self._data_factory.get_residuals_data(
-            self._raw_data,
-            self._sma
-            )
+        self._residuals = self._data_pipeline.get_residuals_data(
+            self._sma,
+            sma_lookback_period
+        )
 
-        # Makes labels
-        test_data, test_labels = self._preprocess_residuals()
+        # Create sets
+        sets = [self._residuals[i:i + self._pointsPerSet] for i in range(len(self._residuals) - self._pointsPerSet + 1)]
+
+        # Generate labels
+        test_data, test_labels = self._data_pipeline.generate_labels(
+            sets,
+            self._labelsPerSet,
+        )
 
         # Predict the residuals
         self._predicted_residuals, self._predicted_residuals_std = self._ensemble_model.\
@@ -259,15 +296,17 @@ class ForcastFactoryEnsemble:
         Extrapolates the SMA using the trend model.
         """
         # Gets the SMA data
-        sma_data = self._data_factory.get_sma(self._raw_data, 3)
+        if self._sma is None:
+            self._sma = self._data_pipeline.get_sma(self._sma_lookback_period)
 
         # Generates sets
-        processor = DataProcessor(data=None, unpack=False)
-
-        sets = [sma_data[i:i + self._pointsPerSet] for i in range(len(sma_data) - self._pointsPerSet + 1)]
+        sets = [self._sma[i:i + self._pointsPerSet] for i in range(len(self._sma) - self._pointsPerSet + 1)]
 
         # Creates labels
-        test_data, test_labels = processor.generate_labels(sets, 1)
+        test_data, test_labels = self._data_pipeline.generate_labels(
+            sets,
+            self._labelsPerSet
+        )
 
         # Predict the SMA
         self._extrapolated_sma, self._extrapolated_sma_std = self._ensemble_model.\
@@ -276,56 +315,6 @@ class ForcastFactoryEnsemble:
         # Set the actual SMA to the test labels
         self._actual_sma = test_labels
         
-    def _preprocess_residuals(self) -> tf.Tensor:
-        """
-        This method ensures that there are enough datapoints to fit
-        the input shape of the model. After that it reduces the number
-        of residuals to fit the input shape. Utilises tensorflow's
-        convert_to_tensor method to create a tensor in the right shape
-        for the prediciction method of the Model.
-
-        :raises ValueError: if the number of datapoints is smaller
-        than the input shape
-        :return: resiudals in the form of a tensor object ready to
-        be used as an input of a NN Model.
-        :rtype: tf.Tensor
-        """
-        # Generates sets
-        processor = DataProcessor(data=None, unpack=False)
-
-        sets = [self._residuals[i:i + self._pointsPerSet] for i in range(len(self._residuals) - self._pointsPerSet + 1)]
-
-        # Generates labels
-        test_data, test_labels = processor.generate_labels(sets, 1)
-        
-        return test_data, test_labels
-    
-    def _get_raw_data(
-            self,
-            start_date: int,
-            end_date: str,
-            interval: str
-        ) -> None:
-        """
-        Helper method to get raw data used for plotting
-        utilising the DataFactory.
-
-        :param start_date: the start date of the data retrieval
-        :type start_date: str
-        :param end_date: the end date of the data retrieval
-        :type end_date: str
-        :param interval: the scale of the candlesticks
-        :type interval: str
-        """
-        self._start_date = start_date
-        self._end_date = end_date
-        self._interval = interval
-        self._raw_data = self._data_factory.get_raw_data(
-            start_date,
-            end_date,
-            interval
-        )
-
     def _validate_predictions(self, predictions: Any) -> None:
         """
         Validates if predictions have been made.

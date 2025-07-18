@@ -5,7 +5,7 @@ from naive_model import Model
 from naive_model import LstmModel
 
 
-MODEL_FOLDER = os.path.join(os.getcwd(), "models")
+MODEL_FOLDER = os.path.join(os.getcwd(), "saved_models")
 
 
 class EnsembleModel:
@@ -58,8 +58,6 @@ class EnsembleModel:
         all_stds = []
         for dat in data_sets:
             residuals_tensor = np.array(dat).reshape(1,2)
-    
-            prediction = self._residual_model.predict(residuals_tensor)
 
             mean, std = self._residual_model.monte_carlo_predictions(residuals_tensor, 1000)
 
@@ -84,7 +82,6 @@ class EnsembleModel:
         :rtype: np.ndarray
         """
         data_sets_arr = np.array(data_sets)
-        prediction = self._trend_model.predict(data_sets_arr)
 
         mean, std = self._trend_model.monte_carlo_predictions(data_sets_arr, 1000)
 

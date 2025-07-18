@@ -1,11 +1,13 @@
+import os
 import numpy as np
 import pickle
 
-
 from market.data import DataMaker
 from market.model import RollingModel
+from utils import save_pkl
 
 
+# Hyperparameters found to be the best for the model as well as the environment
 MLP_DATA = 3
 LSTM_DATA = 2
 CLOSING_DATA = 1
@@ -16,7 +18,16 @@ CHECKPOINT_NUM = 250
 RETRAIN_FREQUENCY = range(0, 100001, INFERENCE_NUM) # Retrain every 10 steps
 CHECKPOINT_FREQUENCY = range(0, 100001, CHECKPOINT_NUM) # Save checkpoint every 500 steps
 
+
 class TradingEnv:
+    """
+    A class to simulate a trading environment for stock market forecasting.
+    It uses a rolling approach to train MLP and LSTM models on the provided training data
+    and then predicts the closing prices using the trained models. The class also provides methods
+    to take actions based on the predictions, evaluate holdings, and save the state of the environment.
+    It maintains a portfolio, balance, and profit history, allowing for the simulation of trading strategies.
+    The environment can be used to test the forecasting abilities of an ensemble model.
+    """
     def __init__(
             self, 
             stock_codes: list[str],
@@ -26,9 +37,30 @@ class TradingEnv:
             labels_per_set: int,
             lookback: int = 3,
             initial_balance: int = 1000,
-            alpha: float = 0
-        ):
+            alpha: float = 0,
+            data_folder: str = "experiments/market_experiment2",
+        ) -> None:
+        """Initialize the trading environment with stock data and parameters.
+
+        :param stock_codes: List of stock codes to be used in the experiment.
+        :type stock_codes: list[str]
+        :param start_date: The starting date to retrieve data from. Must be in the format `yyyy-mm-dd`.
+        :type start_date: str
+        :param end_date: The end date to retrieve data from. Must be in the format `yyyy-mm-dd`.
+        :type end_date: str
+        :param points_per_set: The number of points per set.
+        :type points_per_set: int
+        :param labels_per_set: The number of labels.
+        :type labels_per_set: int
+        :param lookback: The number of past points to be considered for the Simple Moving Average (SMA).
+        :type lookback: int, optional
+        :param initial_balance: The initial balance for the trading environment.
+        :type initial_balance: int, optional
+        :param alpha: The alpha value for the model training (used to compute the rolling weights).
+        :type alpha: float, optional
+        """
         self.alpha_val = alpha
+        self.data_folder = data_folder
 
         # Forge data
         self.stock_codes, self.stocks_features, self.stocks_labels = DataMaker().forge_data(
@@ -84,7 +116,13 @@ class TradingEnv:
         self.balance_history = [self.balance]
         self.profit_history = [self.total_profit]
 
-    def save_state(self, filename: str):
+    def save_state(self, filename: str) -> None:
+        """
+        Saves the current state of the trading environment to a file.
+
+        :param filename: The name of the file to save the state to.
+        :type filename: str
+        """
         state = {
             'dir_predictions': self.dir_predictions,
             'dir_ground_truth': self.dir_ground_truth,
@@ -97,13 +135,30 @@ class TradingEnv:
             'predicted_closing_prices': self.predicted_closing_prices,
             'real_closing_prices': self.real_closing_prices,
         }
-        with open(filename, 'wb') as f:
-            pickle.dump(state, f)
+        
+        save_pkl(state, filename)
         
     
-    def yolooo(self, dollars_per_trade: int = 100, transaction_fee: float = 0.00):
+    def roll_the_market(
+            self,
+            dollars_per_trade: int = 100,
+            transaction_fee: float = 0.00
+        ) -> bool:
+        """
+        Rolls the market by taking actions based on the current prices and predictions.
+        It updates the portfolio, balance, and profit history, and saves the state if necessary.
+        This method simulates a trading step in the environment and is the main loop of the trading simulation.
+
+        :param dollars_per_trade: The amount of money to be used for each trade.
+        :type dollars_per_trade: int, optional
+        :param transaction_fee: The transaction fee to be applied to each trade.
+        :type transaction_fee: float, optional
+        :return: True if the episode is done, False otherwise.
+        :rtype: bool
+        """
         if self.current_step in CHECKPOINT_FREQUENCY:
             filename = f"checkpoint_{self.current_step}_alpha_{self.alpha_val*100}.pkl"
+            filename = os.path.join(self.data_folder, filename)
             self.save_state(filename)
             
         if self.current_step in RETRAIN_FREQUENCY:
@@ -142,7 +197,24 @@ class TradingEnv:
         
         return done
     
-    def _sell_everything(self, current_prices, current_dates, transaction_fee):
+    def _sell_everything(
+            self,
+            current_prices: np.ndarray,
+            current_dates: np.ndarray,
+            transaction_fee: np.ndarray
+        ) -> None:
+        """
+        Sells all the shares held in the portfolio at the current prices.
+        This method iterates through all the stock codes and sells the shares held,
+        updating the balance and actions accordingly. Usually triggered when the episode is done.
+
+        :param current_prices: The current prices of the stocks.
+        :type current_prices: np.ndarray
+        :param current_dates: The current dates of the stocks.
+        :type current_dates: np.ndarray
+        :param transaction_fee: The transaction fee to be applied to each trade.
+        :type transaction_fee: float
+        """
         for num, tik in enumerate(self.stock_codes):
             tik_price = current_prices[num]
             current_date = current_dates[num]
@@ -178,7 +250,19 @@ class TradingEnv:
             self.trading_dates[tik].append(current_date)
 
     
-    def _evaluate_holdings(self, current_prices):
+    def _evaluate_holdings(
+            self,
+            current_prices: np.ndarray
+        ) -> float:
+        """
+        Evaluates the current holdings in the portfolio by calculating the total value of the portfolio.
+        It sums the cash balance and the value of all shares held in the portfolio.
+
+        :param current_prices: The current prices of the stocks.
+        :type current_prices: np.ndarray
+        :return: The total value of the portfolio.
+        :rtype: float
+        """
         holdings_evaluation = 0
         for num, tik in enumerate(self.stock_codes):
             # Instantiates the dictionary
@@ -200,6 +284,23 @@ class TradingEnv:
         return portfolio
     
     def _take_action(self, current_prices, current_dates, dollars_per_trade: int, transaction_fee: float):
+        """
+        Takes action based on the current prices and predictions.
+        It checks the direction predictions for each stock and decides whether to buy, sell, or hold.
+        It updates the balance, shares held, and actions taken accordingly.
+        Right now it only supports three actions: BUY, SELL, and HOLD.
+        If the stock is predicted to go up, it buys shares if there is enough balance.
+        If the stock is predicted to go down, it sells shares if any are held.
+
+        :param current_prices: The current prices of the stocks.
+        :type current_prices: np.ndarray
+        :param current_dates: The current dates of the stocks.
+        :type current_dates: np.ndarray
+        :param dollars_per_trade: The amount of money to be used for each trade.
+        :type dollars_per_trade: int
+        :param transaction_fee: The transaction fee to be applied to each trade.
+        :type transaction_fee: float
+        """
         for num, tik in enumerate(self.stock_codes):
             tik_price = current_prices[num]
             current_date = current_dates[num]
@@ -254,15 +355,25 @@ class TradingEnv:
             self.actions[tik].append(action)
             self.trading_dates[tik].append(current_date)
     
-    def _train_models(self):
+    def _train_models(self) -> None:
+        """
+        Trains the MLP and LSTM models for each stock in the portfolio.
+        It uses the training data sliced by the current step to the training window.
+        If it's the first step, it trains the initial models. Otherwise, it trains the models
+        with the rolling window, using the old models as a starting point.
+        """
         for num, stock in enumerate(self.stock_codes):
             # Get MLP training data, sliced by the current step to the training window
-            training_data_mlp = self.stocks_features[num, MLP_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
-            training_labels_mlp = self.stocks_labels[num, MLP_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
+            training_data_mlp = self.\
+                stocks_features[num, MLP_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
+            training_labels_mlp = self.\
+                stocks_labels[num, MLP_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
 
             # Get LSTM training data, sliced by the current step to the training window
-            training_data_lstm = self.stocks_features[num, LSTM_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
-            training_labels_lstm = self.stocks_labels[num, LSTM_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
+            training_data_lstm = self.\
+                stocks_features[num, LSTM_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
+            training_labels_lstm = self.\
+                stocks_labels[num, LSTM_DATA, self.current_step:TRAINING_WINDOW+self.current_step, :].astype(np.float32)
 
             if self.current_step == 0: # Train the initial models
                 mlp_model, lstm_model = self.builder.train(
@@ -294,7 +405,13 @@ class TradingEnv:
             else:
                 self.models_dict[stock] = (mlp_model, lstm_model)
     
-    def _predict(self):
+    def _predict(self) -> None:
+        """
+        Predicts the closing prices and uncertainties for each stock in the portfolio.
+        It uses the trained MLP and LSTM models to make predictions based on the testing data.
+        It also checks the direction of the predictions and updates the direction predictions,
+        ground truth, real closing prices, and predicted closing prices accordingly.
+        """
         for num, stock in enumerate(self.stock_codes):
             # Get MLP testing data
             testing_data_mlp = self.stocks_features[
@@ -376,7 +493,10 @@ class TradingEnv:
                 self.real_closing_prices[stock].append(close)
 
     def render(self):
-        """Print trading information."""      
+        """
+        Print trading information.
+        This method displays the current step, shares held, signals, actions, balance, and profit.
+        It formats the output in a readable way, using borders and separators for clarity."""      
         upper_border = "┌" + "─" * 42 + "┐"
 
         msg = f"│ Step: {self.current_step}"

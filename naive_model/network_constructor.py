@@ -2,7 +2,8 @@ from typing import Tuple
 import tensorflow as tf
 from copy import deepcopy
 
-from naive_model import Model
+from naive_model.mlp import Model
+
 
 # Disable progress bars
 tf.keras.utils.disable_interactive_logging()
@@ -24,13 +25,16 @@ ParamTuple = list[
         ]
     ]
 
-LIST_BB = list(range(1000, 1000001, 1000))
 
 class NetworksConstructor:
     """
-    A way of constructing NNs with different parameters to be
-    used in performing a statistical analysis to deremine the
-    optimal set of parameters.
+    The base class for constructing networks.
+    This class is used to construct networks for training and testing.
+    It can perform hyperparameter tuning by training multiple models with different parameters.
+    The parameters are passed as a list of tuples, where each tuple contains:
+    - A list of integers representing the architecture of the model.
+    - A float representing the learning rate.
+    - An integer representing the batch size.
     """
     def __init__(
             self,
@@ -136,6 +140,19 @@ class NetworksConstructor:
             self,
             params: ParamTuple,
         ) -> None:
+        """
+        Trains the model using the provided parameters.
+        The params is a tuple containing the parameters for the model.
+        Each tuple contains:
+        - A list of integers representing the architecture of the model.
+        - A float representing the learning rate.
+        - An integer representing the batch size.
+
+        :param params: A tuple containing the parameters for the model.
+        :type params: ParamTuple
+        :return: the trained model
+        :rtype: Model
+        """
         # Unpacking the parameters
         (
             paramSet,
@@ -182,6 +199,29 @@ class NetworksConstructor:
         model_filename: str,
         model_foldername: str,
         ) -> None:
+        """
+        Trains the model using the provided parameters and saves it.
+        The paramList is a list of tuples containing the parameters for the model.
+        Each tuple contains:
+        - A list of integers representing the architecture of the model.
+        - A float representing the learning rate.
+        - An integer representing the batch size.
+        Multiple models can be trained with different parameters this way, typically
+        used for hyperparameter tuning.
+
+        The model is saved with the specified filename and folder name.
+
+        :param training_data: The data used for training the model.
+        :type training_data: list[float]
+        :param training_labels: The labels corresponding to the training data.
+        :type training_labels: list[float]
+        :param paramList: A list of tuples containing the parameters for the model.
+        :type paramList: list[tuple[list[int], float, int]]
+        :param model_filename: The filename to save the trained model.
+        :type model_filename: str
+        :param model_foldername: The folder name where the model will be saved.
+        :type model_foldername: str
+        """
         # Create a tuple with the parameter set and associated metadata
         param_tuple = (
             paramList,                  # The current parameter set
