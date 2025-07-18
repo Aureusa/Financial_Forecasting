@@ -97,6 +97,8 @@ class ForecastFactoryEnsemble:
 
         self._predicted_closing_prices, self._predicted_closing_prices_std = self._calculate_predicted_closing_prices()
 
+        return self._predicted_closing_prices
+
     def compare_predictions_with_observations(self) -> tuple[list[float], list[float], np.ndarray, list[float], float, float, float]:
         """
         Compares the predicted closing prices with the actual closing prices.
